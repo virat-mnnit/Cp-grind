@@ -59,6 +59,13 @@ export default function Signup() {
               setEmail(e.target.value);
             }}
           ></InputBox>
+          <InputBox
+            placeholder="********"
+            label={"Password"}
+            onChange={(e) => {
+              setPassword(e.target.value);
+            }}
+          ></InputBox>
          
           <Button onClick={handlesubmit} label={"Sign In"}></Button>
           <BottomWarning
