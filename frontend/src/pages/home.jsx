@@ -1,7 +1,10 @@
 import Card from "../components/card"
+import AppBar from "../components/appbar";
+
 export default function Home(){
     return (
         <>
+        <AppBar/>
         <div className="bg-gray-200 min-h-screen py-8 px-4">
             <div className="max-w-xl mx-auto space-y-6">
                 <Card 
@@ -125,6 +128,9 @@ export default function Home(){
                 </Card>
             </div>
         </div>
+       
+        
+        
         </>
     )
 }
