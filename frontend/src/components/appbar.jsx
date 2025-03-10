@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Search, Bell, Sun, Moon, User, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function AppBar() {
   const [darkMode, setDarkMode] = useState(false);
@@ -31,9 +32,13 @@ export default function AppBar() {
   };
 
   // Handle navigation for profile options
+  const navigate = useNavigate();
   const handleProfileOptionClick = (option) => {
     if (option === "Profile") {
-      window.location.href = "http://localhost:5174/profile";
+      navigate("/profile");
+    }
+    else if (option === "Logout") {
+      navigate("/signup");
     }
     setDropdownOpen(false);
   };
