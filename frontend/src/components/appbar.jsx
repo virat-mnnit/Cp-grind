@@ -30,6 +30,14 @@ export default function AppBar() {
     }
   };
 
+  // Handle navigation for profile options
+  const handleProfileOptionClick = (option) => {
+    if (option === "Profile") {
+      window.location.href = "http://localhost:5174/profile";
+    }
+    setDropdownOpen(false);
+  };
+
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-md p-4 flex items-center justify-between relative">
       {/* Left Side: Empty Space for Centering */}
@@ -114,6 +122,7 @@ export default function AppBar() {
                 <div
                   key={option}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                  onClick={() => handleProfileOptionClick(option)}
                 >
                   {option}
                 </div>
