@@ -67,7 +67,7 @@ export default function Signup() {
             }}
           ></InputBox>
          
-          <Button onClick={handlesubmit} label={"Sign In"}></Button>
+          <Button onClick={handlesubmit} label={"Sign Up"}></Button>
           <BottomWarning
             label={"Already have an account?"}
             buttonText={"Login "}
