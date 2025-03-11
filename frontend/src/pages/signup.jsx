@@ -24,13 +24,15 @@ export default function Signup() {
         password,
       });
       if (res.status === 200) {
-        navigate("/");
+        navigate("/after_signup");
         localStorage.setItem("token", response.data.token);
       }
     } catch (error) {
       console.log(error);
     }
   }
+  
+  
 
   return (
     <div className="bg-slate-300 h-screen flex justify-center">
