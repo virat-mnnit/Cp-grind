@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MessageCircle, UserPlus, Check, X, ExternalLink } from 'lucide-react';
+import { MessageCircle, UserPlus, Check, X, ExternalLink, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = ({ 
   userData = null, 
@@ -267,12 +268,35 @@ const Profile = ({
   const getPlatformColor = (platform) => {
     return platformColors[platform.name] || "#3B82F6";
   };
+  const navigate = useNavigate();
+  const handleNavigateHome = () => {
+    // In a real app, you would use router navigation here
+    console.log("Navigating to home...");
+    navigate("/");
+    // Example with react-router:
+    // navigate('/');
+  };
+
 
   return (
     <div className="bg-gray-100 min-h-screen">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
         <div className="container mx-auto px-4 py-8">
+          {/* Stylish Home button at the top */}
+        <div className="mb-4 flex justify-start">
+          <button 
+            onClick={handleNavigateHome}
+            className="group relative overflow-hidden px-5 py-2.5 rounded-full bg-white shadow-md text-blue-600 font-medium transition-all hover:shadow-lg hover:bg-blue-50"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-400 opacity-0 group-hover:opacity-10 transition-opacity"></div>
+            <div className="flex items-center">
+              <Home size={18} className="mr-2 group-hover:scale-110 transition-transform" />
+              <span>Home</span>
+            </div>
+            <div className="absolute bottom-0 left-0 h-1 w-0 group-hover:w-full bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-300"></div>
+          </button>
+        </div>
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center mb-6 md:mb-0">
               <img 
@@ -295,10 +319,10 @@ const Profile = ({
             </div>
             
             <div className="flex flex-col items-center md:items-end">
-              <div className="flex space-x-3 mb-4">
+            <div className="flex flex-col space-y-3 mb-4 mt-0">
                 <button 
                   onClick={() => setShowMessageModal(true)}
-                  className="flex items-center px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-full transition-colors text-sm font-medium"
+                  className="flex items-center justify-center px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 rounded-full transition-colors text-sm font-medium"
                 >
                   <MessageCircle size={16} className="mr-2" />
                   Message
@@ -307,7 +331,7 @@ const Profile = ({
                 <button 
                   onClick={handleFriendAction}
                   disabled={friendRequestSent}
-                  className={`flex items-center px-4 py-2 rounded-full transition-colors text-sm font-medium ${
+                  className={`flex items-center px-4 py-2 rounded-full transition-colors text-sm font-medium w-36 ${
                     isFriend 
                       ? 'bg-red-100 text-red-600 hover:bg-red-200' 
                       : friendRequestSent 
