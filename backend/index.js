@@ -8,6 +8,9 @@ import authRoutes from './Routes/authRoutes.js'
 import userRoutes from './Routes/userRoutes.js'
 import friendRoutes from './Routes/friendRoutes.js'
 import notificationRoutes from './Routes/notificationRoutes.js'
+import platformRoutes from './Routes/platformRoutes.js'
+import postRoutes from './Routes/postRoutes.js'
+
 
 const app = express();
 dotenv.config();
@@ -20,7 +23,8 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/friends', friendRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
-
+app.use('/api/v1/platforms', platformRoutes);
+app.use('/api/v1/posts', postRoutes);
 
 
 try {

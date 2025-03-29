@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
- 
+
 const platformSchema = new mongoose.Schema(
     {
         user: {
@@ -7,39 +7,33 @@ const platformSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
-
         platformName: {
             type: String,
             required: true,
         },
-
-        platfromUsername: {
-            type: String,
+        platformUsername: {
+            type: String, 
             required: true,
         },
-
         totalContests: {
-            type: number,
+            type: Number, 
         },
-
         totalQuestions: {
-            type: number,
+            type: Number, 
         },
-
         curRating: {
-            type: number,
+            type: Number, 
         },
-
         maxRating: {
-            type: number,
+            type: Number, 
         },
         joinedOn: {
             type: Date,
-        }
-
-    }
+        },
+    },
+    { timestamps: true } 
 );
 
-const Platform = new mongoose.Model("Platform", platformSchema);
+const Platform = mongoose.model("Platform", platformSchema); 
 
 export default Platform;

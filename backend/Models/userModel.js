@@ -22,12 +22,6 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: "",
 		},
-        platforms: [
-            {
-                platformName: { type:String, required: true },
-                username: { type: String, required: true }
-            },
-        ],
 		friends: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
