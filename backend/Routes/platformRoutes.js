@@ -9,7 +9,7 @@ import { protectRoute } from "../Middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/add", addPlatform); 
+router.post("/add",protectRoute, addPlatform); 
 router.get("/:userId", protectRoute, getPlatforms); 
 router.get("/:userId/getLivePlatformData", protectRoute, getLivePlatformData); 
 router.put("/:platformId", protectRoute, updatePlatform); 

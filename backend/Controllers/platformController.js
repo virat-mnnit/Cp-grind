@@ -3,14 +3,10 @@ import axios from "axios";
 
 export const addPlatform = async (req, res) => {
     try {
-
-        console.log("Request received at /add");
-        console.log("Request Body:", req.body);
-        console.log("Authenticated User:", req.user);
-        
+       
         const { platformName, platformUsername } = req.body;
         const userId = req.user._id;
-
+        
         const existingPlatform = await Platform.findOne({
             user: userId,
             platformName,
@@ -19,7 +15,7 @@ export const addPlatform = async (req, res) => {
         if (existingPlatform) {
             return res.status(400).json({ message: "Platform already exists." });
         }
-
+        
         const platform = new Platform({
             user: userId,
             platformName,
@@ -86,15 +82,20 @@ export const getLivePlatformData = async (req, res) => {
         }
 
         const fetchLiveData = async (platform) => {
-            switch (platform.platformName.toLowerCase()) {
-                case "codeforces":
-                    return axios.get(`https://codeforces.com/api/user.info?handles=${platform.platformUsername}`);
-                case "leetcode":
-                    return axios.get(`https://leetcode-stats-api.herokuapp.com/${platform.platformUsername}`);
-                case "codechef":
-                    return axios.get(`https://api.codechef.com/users/${platform.platformUsername}`);
-                default:
-                    return null;
+            try {
+                switch (platform.platformName.toLowerCase()) {
+                    case "codeforces":
+                        const response = await axios.get(
+                            `https://codeforces.com/api/user.info?handles=${platform.platformUsername}`
+                        );
+                        console.log("Codeforces API Response:", response.data); // Debug log
+                        return response.data?.result?.[0] || { error: "No data found" }; // Extract data
+                    default:
+                        return { error: `Platform ${platform.platformName} is not supported.` };
+                }
+            } catch (error) {
+                console.error(`Error fetching data for ${platform.platformName}:`, error.message);
+                throw error;
             }
         };
 
@@ -104,7 +105,7 @@ export const getLivePlatformData = async (req, res) => {
                 return {
                     platformName: platform.platformName,
                     platformUsername: platform.platformUsername,
-                    liveData: liveData?.result || {},
+                    liveData: liveData,
                 };
             } catch (error) {
                 return {
@@ -119,7 +120,9 @@ export const getLivePlatformData = async (req, res) => {
 
         res.status(200).json({ message: "Live platform data fetched successfully", livePlatformData });
     } catch (error) {
+        console.error("Error fetching live platform data:", error.message);
         res.status(500).json({ message: "Server error", error });
     }
 };
+
 
