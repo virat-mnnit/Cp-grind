@@ -12,20 +12,21 @@ export default function Signup() {
   const [firstname, setFirstName] = useState("");
   const [lastname, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
-
   async function handlesubmit() {
     try {
-      const response = await axios.post(`${BACKEND_API_SIGNIN}`, {
+      console.log(password);
+      const res = await axios.post('http://localhost:3000/api/v1/auth/signup', {
         firstname,
         lastname,
         email,
+        username,
         password,
       });
-      if (res.status === 200) {
+      if (res.status === 201) {
         navigate("/after_signup");
-        localStorage.setItem("token", response.data.token);
       }
     } catch (error) {
       console.log(error);
@@ -62,6 +63,13 @@ export default function Signup() {
             }}
           ></InputBox>
           <InputBox
+            placeholder="username"
+            label={"username"}
+            onChange={(e) => {
+              setUsername(e.target.value);
+            }}
+          ></InputBox>
+          <InputBox
             placeholder="********"
             label={"Password"}
             onChange={(e) => {
@@ -70,6 +78,7 @@ export default function Signup() {
           ></InputBox>
          
           <Button onClick={handlesubmit} label={"Sign Up"}></Button>
+
           <BottomWarning
             label={"Already have an account?"}
             buttonText={"Login "}

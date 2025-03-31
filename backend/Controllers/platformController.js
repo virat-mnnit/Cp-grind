@@ -88,7 +88,6 @@ export const getLivePlatformData = async (req, res) => {
                         const response = await axios.get(
                             `https://codeforces.com/api/user.info?handles=${platform.platformUsername}`
                         );
-                        console.log("Codeforces API Response:", response.data); // Debug log
                         return response.data?.result?.[0] || { error: "No data found" }; // Extract data
                     default:
                         return { error: `Platform ${platform.platformName} is not supported.` };

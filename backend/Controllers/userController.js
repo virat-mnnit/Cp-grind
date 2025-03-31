@@ -22,7 +22,6 @@ export const updateProfile = async (req, res) => {
 			"firstname",
             "lastname",
             "username",
-            "password",
 			"profilePicture",
 		];
 
