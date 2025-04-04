@@ -16,14 +16,13 @@ export default function Signup() {
 
   async function handlesubmit() {
     try {
-      const response = await axios.post(`${BACKEND_API_LOGIN}`, {
-       
+      const res = await axios.post(`http://localhost:3000/api/v1/auth/login`, {
         email,
         password,
       });
-      if(res.status===200){
+      if(res.status===201){
       navigate("/");
-      localStorage.setItem("token", response.data.token);}
+    }
 
      
     } catch (error) {

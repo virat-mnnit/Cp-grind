@@ -18,16 +18,26 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: "",
 		},
-		about: {
+		dateOfBirth: {
+			type: Date,
+		},
+		phoneNumber: {
+			type: Number,
+		},
+		academicDetails: {
+			institution: String,
+			degree: String,
+			fieldOfStudy: String,
+			graduationYear: Date,
+			cgpa: Number,
+		},
+		bio: {
 			type: String,
 			default: "",
 		},
-        platforms: [
-            {
-                platformName: { type:String, required: true },
-                username: { type: String, required: true }
-            },
-        ],
+		location: {
+			type: String,
+		},
 		friends: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
