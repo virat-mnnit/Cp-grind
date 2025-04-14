@@ -1,7 +1,19 @@
-import cloudinary from "../lib/cloudinary.js";
 import User from "../Models/userModel.js";
+import { uploadOnCloudinary } from "../lib/cloudinary.js";
+import multer from "multer";
+const upload = multer();
 
 export const getProfile = async (req, res) => {
+    try {
+		const user=req.user;
+		res.json(user);
+	} catch (error) {
+		console.error("Error in getProfile controller:", error);
+		res.status(500).json({ message: "Server error" });
+	}
+}
+
+export const getUserProfile = async (req, res) => {
     try {
 		const user = await User.findOne({ username: req.params.username }).select("-password");
 
@@ -11,45 +23,57 @@ export const getProfile = async (req, res) => {
 
 		res.json(user);
 	} catch (error) {
-		console.error("Error in getProfile controller:", error);
+		console.error("Error in getUserProfile controller:", error);
 		res.status(500).json({ message: "Server error" });
 	}
 }
 
 export const updateProfile = async (req, res) => {
     try {
-		const allowedFields = [
-			"firstname",
+		console.log(req.body);
+        const allowedFields = [
+            "firstname",
             "lastname",
             "username",
-			"profilePicture",
-		];
+            "phone",
+            "dob",
+            "location",
+            "bio",
+            "academics", // Ensure academics is passed correctly as an object or array
+        ];
 
-        if(req.params.username!=req.user.username){
-            return res.status(403).json({
-                message: "Not permitted to update other user's profile"
-            })
+        // Prepare the data that needs to be updated
+        const updatedData = {};
+		// If academics is a stringified JSON, parse it
+        if (req.body.academics) {
+            updatedData.academics = JSON.parse(req.body.academics);
+        }
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updatedData[field] = req.body[field];
+            }
         }
 
-		const updatedData = {};
-
-		for (const field of allowedFields) {
-			if (req.body[field]) {
-				updatedData[field] = req.body[field];
+        // If a profile picture is provided, upload to Cloudinary and save the URL
+        if (req.file) {
+			const cloudinaryUrl = await uploadOnCloudinary(req.file.path);
+			if (cloudinaryUrl) {
+			  updatedData.profilePicture = cloudinaryUrl;
 			}
-		}
-        if(req.body.profilePicture){
-            const result = await cloudinary.uploader.upload(req.body.profilePicture);
-            updatedData.profilePicture = result.secure_url;
-        }
+		  }
 
-		const user = await User.findByIdAndUpdate(req.user._id, { $set: updatedData }, { new: true }).select(
-			"-password"
-		);
+        // Update the user with the new data
+        const user = await User.findByIdAndUpdate(req.user._id, { $set: updatedData }, { new: true }).select(
+            "-password"
+        );
 
-		res.json(user);
-	} catch (error) {
-		console.error("Error in updateProfile controller:", error);
-		res.status(500).json({ message: "Server error" });
-	}
-}
+        // Send response with the updated user data (excluding password)
+        res.status(200).json({
+            message: "Profile updated successfully",
+            user: user,
+        });
+    } catch (error) {
+        console.error("Error in updateProfile controller:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};

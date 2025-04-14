@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import zod from 'zod';
 import User from '../Models/userModel.js';
+import nodemon from 'nodemon';
 
 const signupBody = zod.object({
     firstname: zod.string().max(100).min(3),
@@ -43,9 +44,9 @@ export const signup = async (req, res) => {
 
     const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
 
-            res.cookie("jwt", token, {
-                maxAge: 3 * 24 * 60 * 60 * 1000,
-            });
+    res.cookie("jwt", token, {
+        maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
+      });
 
             res.status(201).json({ message: "User registered successfully" });
         } catch(error){
@@ -85,9 +86,11 @@ export const login = async (req, res) => {
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "3d" });
 
+           
             res.cookie("jwt", token, {
-                maxAge: 3 * 24 * 60 * 60 * 1000,
-            });
+                maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
+              });
+              
             res.status(201).json({ message: "User loggedin successfully" });
 
     } catch(error){

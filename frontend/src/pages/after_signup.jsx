@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const PersonalDetailsForm = () => {
   // Form state
@@ -11,61 +13,103 @@ const PersonalDetailsForm = () => {
     bio: ''
   });
   const [codingPlatforms, setCodingPlatforms] = useState([{ platform: '', username: '' }]);
-  const [academics, setAcademics] = useState([{ degree: '', institution: '', year: '' }]);
+  const [academics, setAcademics] = useState({
+    degree: '',
+    institution: '',
+    year: ''
+  });
   const [profileImage, setProfileImage] = useState(null);
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
+  const formatDateForInput = (isoDate) => {
+    const date = new Date(isoDate);
+    return date.toISOString().split('T')[0]; // Extract "yyyy-MM-dd"
+  };
+  
+  
   // Fetch user data on mount
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/user/profile');
-        if (response.ok) {
-          const userData = await response.json();
+  
+        // Fetch user data
+        const response = await axios.get('http://localhost:3001/api/v1/user/', {
+          withCredentials: true,
+        });
+  
+        if (response.status === 200) {
+          const userData = response.data;
           
+          // Store userId for platform updates
+          if (userData._id) {
+            setUserId(userData._id);
+          }
+  
           // Update state with fetched data
           setFormData({
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
+            firstName: userData.firstname || '',
+            lastName: userData.lastname || '',
             phone: userData.phone || '',
-            dob: userData.dob || '',
+            dob: userData.dob ? formatDateForInput(userData.dob) : '',
             location: userData.location || '',
-            bio: userData.bio || ''
+            bio: userData.bio || '',
           });
-          
-          if (userData.codingPlatforms?.length > 0) {
-            setCodingPlatforms(userData.codingPlatforms);
+          if(userData.academics){
+            const academicsData = JSON.parse(userData.academics);
+            setAcademics(academicsData);
           }
-          
-          if (userData.academics?.length > 0) {
-            setAcademics(userData.academics);
+          // Set profile image if available
+          if (userData.profilePicture) {
+            setProfileImageUrl(userData.profilePicture);
           }
-          
-          if (userData.profileImageUrl) {
-            setProfileImageUrl(userData.profileImageUrl);
+  
+          if (userData._id) {
+            // Fetch platforms
+            try {
+              const platformResponse = await axios.get(
+                `http://localhost:3001/api/v1/platforms/${userData._id}`,
+                { withCredentials: true }
+              );
+  
+              if (platformResponse.status === 200 && platformResponse.data) {
+                const platforms = platformResponse.data.map((platform) => ({
+                  platform: platform.platformName,
+                  username: platform.platformUsername,
+                }));
+  
+                setCodingPlatforms(platforms.length > 0 ? platforms : [{ platform: '', username: '' }]);
+              }
+            } catch (platformError) {
+              console.error('Error fetching platforms:', platformError);
+              // Keep default platform state if fetch fails
+            }
           }
-        } else {
-          console.error('Failed to fetch user data');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
+        // Handle unauthorized access
+        if (error.response && error.response.status === 401) {
+          navigate('/login');
+        }
       } finally {
         setIsLoading(false);
       }
     };
-
+  
     fetchUserData();
-  }, []);
-
+  }, [navigate]);
+  
   // Handle basic form field changes
   const handleInputChange = (e) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-
+  
   // Coding platforms functions
   const addCodingPlatform = () => {
     setCodingPlatforms([...codingPlatforms, { platform: '', username: '' }]);
@@ -81,19 +125,12 @@ const PersonalDetailsForm = () => {
     setCodingPlatforms(platforms => platforms.filter((_, i) => i !== index));
   };
 
-  // Academic details functions
-  const addAcademic = () => {
-    setAcademics([...academics, { degree: '', institution: '', year: '' }]);
-  };
-
-  const updateAcademic = (index, field, value) => {
-    const updatedAcademics = [...academics];
-    updatedAcademics[index][field] = value;
-    setAcademics(updatedAcademics);
-  };
-
-  const removeAcademic = (index) => {
-    setAcademics(items => items.filter((_, i) => i !== index));
+  // Academic details functions - updated for single object
+  const handleAcademicChange = (field, value) => {
+    setAcademics(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   // Profile image functions
@@ -116,41 +153,142 @@ const PersonalDetailsForm = () => {
   };
 
   const handleBack = () => {
-    console.log('Going back...');
-    // Use router.back() or history.goBack() in real app
+    navigate('/profile');
   };
+
+  const syncCodingPlatforms = async () => {
+    try {
+      // Fetch the user data
+      const userData = await axios.get('http://localhost:3001/api/v1/user/', {
+        withCredentials: true, // Include cookies in the request
+      });
+  
+      if (!userData || !userData.data) {
+        console.log("Error in fetching user data");
+        return;
+      }
+  
+      // Fetch existing platforms from the database
+      const { data: existingPlatforms } = await axios.get(`http://localhost:3001/api/v1/platforms/${userData.data._id}`, {
+        withCredentials: true, // Include cookies in the request
+      });
+  
+      let platformsToAdd = [];
+      const platformsToDelete = [];
+  
+      // If there are no existing platforms, proceed to add new ones
+      if (!existingPlatforms || existingPlatforms.length === 0) {
+        console.log("No existing platforms found. Proceeding to add new platforms.");
+        platformsToAdd = codingPlatforms;
+      } else {
+        // Identify platforms to add or update
+        codingPlatforms.forEach((platformObj) => {
+          const match = existingPlatforms.some(
+            (existing) =>
+              existing.platformName === platformObj.platform && existing.platformUsername === platformObj.username
+          );
+          if (!match) {
+            platformsToAdd.push(platformObj);
+          }
+        });
+  
+        // Identify platforms to delete
+        existingPlatforms.forEach((platformObj) => {
+          const match = codingPlatforms.find((current) => current.platform === platformObj.platformName);
+          if (!match) {
+            platformsToDelete.push(platformObj._id); // Use `_id` for deletion
+          }
+        });
+      }
+  
+      // Add platforms one at a time
+      for (const { platform, username } of platformsToAdd) {
+        try {
+          await axios.post('http://localhost:3001/api/v1/platforms/add', {
+            platformName: platform,
+            platformUsername: username,
+          }, {
+            withCredentials: true, // Include cookies in the request
+          });
+          console.log(`Platform added: ${platform}`);
+        } catch (error) {
+          console.error(`Error adding platform: ${platform}`, error);
+        }
+      }
+  
+      // Delete platforms one at a time
+      for (const id of platformsToDelete) {
+        try {
+          await axios.delete(`http://localhost:3001/api/v1/platforms/remove/${id}`, {
+            withCredentials: true, // Include cookies in the request
+          });
+          console.log(`Platform removed: ${id}`);
+        } catch (error) {
+          console.error(`Error removing platform with id: ${id}`, error);
+        }
+      }
+      console.log(platformsToAdd);
+      console.log(platformsToDelete);
+      console.log(existingPlatforms);
+      console.log(codingPlatforms);
+      console.log('Platforms synced successfully!');
+    } catch (error) {
+      console.error('Error syncing platforms:', error);
+    }
+  };
+  
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
-      const formDataToSubmit = new FormData();
-      
-      // Add form data
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataToSubmit.append(key, value);
-      });
-      
-      formDataToSubmit.append('codingPlatforms', JSON.stringify(codingPlatforms));
-      formDataToSubmit.append('academics', JSON.stringify(academics));
-      
-      if (profileImage) {
-        formDataToSubmit.append('profileImage', profileImage);
-      }
-      
-      const response = await fetch('/api/user/profile', {
-        method: 'POST',
-        body: formDataToSubmit
-      });
-      
-      if (response.ok) {
-        console.log('Profile updated successfully');
-      } else {
-        console.error('Failed to update profile');
-      }
+        // Create FormData object for multipart/form-data submission
+        const formDataToSubmit = new FormData();
+        
+        // Add basic profile fields
+        formDataToSubmit.append('firstname', formData.firstName);
+        formDataToSubmit.append('lastname', formData.lastName);
+        formDataToSubmit.append('phone', formData.phone);
+        formDataToSubmit.append('dob', formData.dob);
+        formDataToSubmit.append('location', formData.location);
+        formDataToSubmit.append('bio', formData.bio);
+        
+        // Add academics as a JSON string (now a single object)
+        formDataToSubmit.append('academics', JSON.stringify(academics));
+
+        // Add profile image if exists
+        if (profileImage) {
+            formDataToSubmit.append('profilePicture', profileImage);
+        }
+        
+        // Log the FormData values for debugging
+        console.log(formDataToSubmit);
+        for (let pair of formDataToSubmit.entries()) {
+          console.log(pair[0] + ': ' + pair[1]);
+        }
+
+        // Update the user profile
+        const userResponse = await axios.put(
+            'http://localhost:3001/api/v1/user/update',
+            formDataToSubmit,
+            {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                }
+            }
+        );
+        // update coding platforms
+        await syncCodingPlatforms();
+        alert("Profile updated successfully");
+        // navigate("/profile");
+
     } catch (error) {
-      console.error('Error updating profile:', error);
+        console.error('Error updating profile:', error);
+        alert('Failed to update profile. Please try again.');
     }
-  };
+};
 
   if (isLoading) {
     return (
@@ -180,7 +318,7 @@ const PersonalDetailsForm = () => {
             <h1 className="text-2xl font-bold text-white text-center">Personal Details</h1>
           </div>
           
-          <form onSubmit={handleSubmit} className="p-6 space-y-8">
+          <form onSubmit={handleSubmit} className="p-6 space-y-8" encType="multipart/form-data">
             {/* Profile Image */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-800 border-b pb-2">Profile Image</h2>
@@ -220,6 +358,7 @@ const PersonalDetailsForm = () => {
                     ref={fileInputRef}
                     onChange={handleImageChange}
                     className="hidden"
+                    name="profilePicture"
                   />
                   <button
                     type="button"
@@ -234,145 +373,132 @@ const PersonalDetailsForm = () => {
             </div>
 
             {/* Personal Information */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-gray-800 border-b pb-2">Basic Information</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
-                  <input
-                    type="text"
-                    id="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-gray-800 border-b pb-2">Basic Information</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
+                    <input
+                      type="text"
+                      id="firstName"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
                 </div>
-                
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="dob" className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                    <input
+                      type="date"
+                      id="dob"
+                      name="dob"
+                      value={formData.dob}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
+                    <input
+                      type="text"
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    value={formData.lastName}
+                  <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio</label>
+                  <textarea
+                    id="bio"
+                    name="bio"
+                    rows="4"
+                    value={formData.bio}
                     onChange={handleInputChange}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
+                    placeholder="Tell us about yourself..."
+                  ></textarea>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="dob" className="block text-sm font-medium text-gray-700">Date of Birth</label>
-                  <input
-                    type="date"
-                    id="dob"
-                    value={formData.dob}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="location" className="block text-sm font-medium text-gray-700">Location</label>
-                  <input
-                    type="text"
-                    id="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio</label>
-                <textarea
-                  id="bio"
-                  rows="4"
-                  value={formData.bio}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Tell us about yourself..."
-                ></textarea>
-              </div>
-            </div>
+
             
-            {/* Academic Details */}
+            {/* Academic Details - Now as a single object */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-800 border-b pb-2">Academic Details</h2>
               
-              {academics.map((academic, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-md bg-gray-50">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label htmlFor={`degree-${index}`} className="block text-sm font-medium text-gray-700">Degree/Course</label>
-                      <input
-                        type="text"
-                        id={`degree-${index}`}
-                        value={academic.degree}
-                        onChange={(e) => updateAcademic(index, 'degree', e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor={`institution-${index}`} className="block text-sm font-medium text-gray-700">Institution</label>
-                      <input
-                        type="text"
-                        id={`institution-${index}`}
-                        value={academic.institution}
-                        onChange={(e) => updateAcademic(index, 'institution', e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor={`year-${index}`} className="block text-sm font-medium text-gray-700">Year</label>
-                      <input
-                        type="text"
-                        id={`year-${index}`}
-                        value={academic.year}
-                        onChange={(e) => updateAcademic(index, 'year', e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+              <div className="p-4 border border-gray-200 rounded-md bg-gray-50">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="degree" className="block text-sm font-medium text-gray-700">Degree/Course</label>
+                    <input
+                      type="text"
+                      id="degree"
+                      value={academics.degree}
+                      onChange={(e) => handleAcademicChange('degree', e.target.value)}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
                   </div>
                   
-                  {academics.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeAcademic(index)}
-                      className="mt-3 text-sm text-red-600 hover:text-red-800"
-                    >
-                      Remove
-                    </button>
-                  )}
+                  <div>
+                    <label htmlFor="institution" className="block text-sm font-medium text-gray-700">Institution</label>
+                    <input
+                      type="text"
+                      id="institution"
+                      value={academics.institution}
+                      onChange={(e) => handleAcademicChange('institution', e.target.value)}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700">Year</label>
+                    <input
+                      type="text"
+                      id="year"
+                      value={academics.year}
+                      onChange={(e) => handleAcademicChange('year', e.target.value)}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                 </div>
-              ))}
-              
-              <button
-                type="button"
-                onClick={addAcademic}
-                className="text-sm flex items-center text-blue-600 hover:text-blue-800"
-              >
-                <span className="mr-1">+</span> Add more academic details
-              </button>
+              </div>
             </div>
             
             {/* Coding Platforms */}

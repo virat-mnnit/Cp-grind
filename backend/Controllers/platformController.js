@@ -30,17 +30,40 @@ export const addPlatform = async (req, res) => {
     }
 };
 
+export const removePlatform = async (req, res) => {
+    try {
+        const platformId = req.params.platformId; // The platformId to remove
+        const userId = req.user._id; // Get the userId from the authenticated user
+        
+        // Check if the platform exists for the user
+        const existingPlatform = await Platform.findById(platformId);
+
+        if (!existingPlatform) {
+            return res.status(404).json({ message: "Platform not found." });
+        }
+
+        // Ensure the platform belongs to the user
+        if (existingPlatform.user.toString() !== userId.toString()) {
+            return res.status(403).json({ message: "You are not authorized to delete this platform." });
+        }
+
+        // Delete the platform
+        await Platform.findByIdAndDelete(platformId);
+
+        res.status(200).json({ message: "Platform removed successfully." });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+};
+
+
+
 
 export const getPlatforms = async (req, res) => {
     try {
         const userId = req.params.userId;
 
         const platforms = await Platform.find({ user: userId });
-
-        if (!platforms.length) {
-            return res.status(404).json({ message: "No platforms found for this user." });
-        }
-
         res.status(200).json(platforms);
     } catch (error) {
         res.status(500).json({ message: "Server error", error });

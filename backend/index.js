@@ -17,7 +17,11 @@ dotenv.config();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+  origin:"http://localhost:5175",  
+  credentials: true, // Allows cookies to be sent
+}));
+
 
 
 app.use('/api/v1/auth', authRoutes);
