@@ -158,84 +158,103 @@ const PersonalDetailsForm = () => {
 
   const syncCodingPlatforms = async () => {
     try {
-      // Fetch the user data
-      const userData = await axios.get('http://localhost:3001/api/v1/user/', {
-        withCredentials: true, // Include cookies in the request
-      });
-  
-      if (!userData || !userData.data) {
-        console.log("Error in fetching user data");
-        return;
-      }
-  
-      // Fetch existing platforms from the database
-      const { data: existingPlatforms } = await axios.get(`http://localhost:3001/api/v1/platforms/${userData.data._id}`, {
-        withCredentials: true, // Include cookies in the request
-      });
-  
-      let platformsToAdd = [];
-      const platformsToDelete = [];
-  
-      // If there are no existing platforms, proceed to add new ones
-      if (!existingPlatforms || existingPlatforms.length === 0) {
-        console.log("No existing platforms found. Proceeding to add new platforms.");
-        platformsToAdd = codingPlatforms;
-      } else {
-        // Identify platforms to add or update
-        codingPlatforms.forEach((platformObj) => {
-          const match = existingPlatforms.some(
-            (existing) =>
-              existing.platformName === platformObj.platform && existing.platformUsername === platformObj.username
-          );
-          if (!match) {
-            platformsToAdd.push(platformObj);
-          }
-        });
-  
-        // Identify platforms to delete
-        existingPlatforms.forEach((platformObj) => {
-          const match = codingPlatforms.find((current) => current.platform === platformObj.platformName);
-          if (!match) {
-            platformsToDelete.push(platformObj._id); // Use `_id` for deletion
-          }
-        });
-      }
-  
-      // Add platforms one at a time
-      for (const { platform, username } of platformsToAdd) {
-        try {
-          await axios.post('http://localhost:3001/api/v1/platforms/add', {
-            platformName: platform,
-            platformUsername: username,
-          }, {
+        // Fetch the user data
+        const userData = await axios.get('http://localhost:3001/api/v1/user/', {
             withCredentials: true, // Include cookies in the request
-          });
-          console.log(`Platform added: ${platform}`);
-        } catch (error) {
-          console.error(`Error adding platform: ${platform}`, error);
+        });
+
+        if (!userData || !userData.data) {
+            console.log("Error in fetching user data");
+            return;
         }
-      }
-  
-      // Delete platforms one at a time
-      for (const id of platformsToDelete) {
-        try {
-          await axios.delete(`http://localhost:3001/api/v1/platforms/remove/${id}`, {
+
+        // Fetch existing platforms from the database
+        const { data: existingPlatforms } = await axios.get(`http://localhost:3001/api/v1/platforms/${userData.data._id}`, {
             withCredentials: true, // Include cookies in the request
-          });
-          console.log(`Platform removed: ${id}`);
-        } catch (error) {
-          console.error(`Error removing platform with id: ${id}`, error);
+        });
+
+        let platformsToAdd = [];
+        const platformsToDelete = [];
+        const platformsToUpdate = [];
+
+        // If there are no existing platforms, proceed to add new ones
+        if (!existingPlatforms || existingPlatforms.length === 0) {
+            console.log("No existing platforms found. Proceeding to add new platforms.");
+            platformsToAdd = codingPlatforms;
+        } else {
+            // Identify platforms to add, update, or delete
+            codingPlatforms.forEach((platformObj) => {
+                const match = existingPlatforms.find(
+                    (existing) => existing.platformName === platformObj.platform
+                );
+
+                if (!match) {
+                    // If platform does not exist in the database, mark for addition
+                    platformsToAdd.push(platformObj);
+                } else if (match.platformUsername !== platformObj.username) {
+                    // If platform exists but username differs, mark for update
+                    platformsToUpdate.push({
+                        id: match._id,
+                        username: platformObj.username,
+                    });
+                }
+            });
+
+            // Identify platforms to delete
+            existingPlatforms.forEach((platformObj) => {
+                const match = codingPlatforms.find((current) => current.platform === platformObj.platformName);
+                if (!match) {
+                    platformsToDelete.push(platformObj._id); // Use `_id` for deletion
+                }
+            });
         }
-      }
-      console.log(platformsToAdd);
-      console.log(platformsToDelete);
-      console.log(existingPlatforms);
-      console.log(codingPlatforms);
-      console.log('Platforms synced successfully!');
+
+        // Add platforms one at a time
+        for (const { platform, username } of platformsToAdd) {
+            try {
+                await axios.post('http://localhost:3001/api/v1/platforms/add', {
+                    platformName: platform,
+                    platformUsername: username,
+                }, {
+                    withCredentials: true, // Include cookies in the request
+                });
+                console.log(`Platform added: ${platform}`);
+            } catch (error) {
+                console.error(`Error adding platform: ${platform}`, error);
+            }
+        }
+
+        // Update platforms one at a time
+        for (const { id, username } of platformsToUpdate) {
+            try {
+                await axios.put(`http://localhost:3001/api/v1/platforms/${id}`, {
+                    platformUsername: username,
+                }, {
+                    withCredentials: true, // Include cookies in the request
+                });
+                console.log(`Platform updated: ${id}`);
+            } catch (error) {
+                console.error(`Error updating platform with id: ${id}`, error);
+            }
+        }
+
+        // Delete platforms one at a time
+        for (const id of platformsToDelete) {
+            try {
+                await axios.delete(`http://localhost:3001/api/v1/platforms/remove/${id}`, {
+                    withCredentials: true, // Include cookies in the request
+                });
+                console.log(`Platform removed: ${id}`);
+            } catch (error) {
+                console.error(`Error removing platform with id: ${id}`, error);
+            }
+        }
+        console.log('Platforms synced successfully!');
     } catch (error) {
-      console.error('Error syncing platforms:', error);
+        console.error('Error syncing platforms:', error);
     }
-  };
+};
+
   
   
 
@@ -282,7 +301,7 @@ const PersonalDetailsForm = () => {
         // update coding platforms
         await syncCodingPlatforms();
         alert("Profile updated successfully");
-        // navigate("/profile");
+        navigate("/profile");
 
     } catch (error) {
         console.error('Error updating profile:', error);
