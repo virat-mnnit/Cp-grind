@@ -18,13 +18,13 @@ export default function Signup() {
   async function handlesubmit() {
     try {
       console.log(password);
-      const res = await axios.post('http://localhost:3000/api/v1/auth/signup', {
+      const res = await axios.post('http://localhost:3001/api/v1/auth/signup', {
         firstname,
         lastname,
         email,
         username,
         password,
-      });
+      },{withCredentials: true});
       if (res.status === 201) {
         navigate("/after_signup");
       }

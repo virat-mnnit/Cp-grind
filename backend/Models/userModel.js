@@ -18,18 +18,16 @@ const userSchema = new mongoose.Schema(
 			type: String,
 			default: "",
 		},
-		dateOfBirth: {
+		dob: {
 			type: Date,
 		},
-		phoneNumber: {
+		phone: {
 			type: Number,
 		},
-		academicDetails: {
+		academics: {
 			institution: String,
 			degree: String,
-			fieldOfStudy: String,
 			graduationYear: Date,
-			cgpa: Number,
 		},
 		bio: {
 			type: String,
